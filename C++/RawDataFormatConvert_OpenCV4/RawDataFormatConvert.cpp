@@ -1,13 +1,13 @@
-﻿/***************************************************************************************************
+/***************************************************************************************************
 * 
-* Notes about how to configure your OpenCV environment and project.
-* 1. You can prepare the required installation package from the official website. https://opencv.org/releases.html
-* 2. If the *.lib files doesn't exist in the package download, you need to compile by yourself with the CMake tool.
-* 3. Add the 'bin' folder path to the PATH.
-* 4. Configure the 'Additional Include Directories', 'Additional Library Directories' and 'Additional Dependencies' for current project property.
+* Ghi chú về cách cấu hình môi trường và dự án OpenCV.
+* 1. Bạn có thể chuẩn bị gói cài đặt cần thiết từ trang web chính thức: https://opencv.org/releases.html
+* 2. Nếu tệp *.lib không có trong gói tải về, bạn cần tự biên dịch bằng công cụ CMake.
+* 3. Thêm đường dẫn thư mục 'bin' vào biến môi trường PATH.
+* 4. Cấu hình 'Additional Include Directories', 'Additional Library Directories' và 'Additional Dependencies' trong thuộc tính dự án hiện tại.
 * 
-* If there is any question or request, please feel free to contact us.
-
+* Nếu có bất kỳ câu hỏi hoặc yêu cầu nào, xin vui lòng liên hệ với chúng tôi.
+* 
 ***************************************************************************************************/
 
 #include <stdio.h>
@@ -20,11 +20,11 @@
 
 enum CONVERT_TYPE
 {
-    OpenCV_Mat         = 0,    // ch:Mat图像格式 | en:Mat format
-    OpenCV_IplImage    = 1,    // ch:IplImage图像格式 | en:IplImage format
+    OpenCV_Mat         = 0,    // Định dạng ảnh Mat
+    OpenCV_IplImage    = 1,    // Định dạng ảnh IplImage
 };
 
-// ch:显示枚举到的设备信息 | en:Print the discovered devices' information
+// Hiển thị thông tin các thiết bị đã tìm thấy
 void PrintDeviceInfo(MV_CC_DEVICE_INFO* pstMVDevInfo)
 {
     if (NULL == pstMVDevInfo)
@@ -33,7 +33,7 @@ void PrintDeviceInfo(MV_CC_DEVICE_INFO* pstMVDevInfo)
         return;
     }
 
-    // 获取图像数据帧仅支持GigE和U3V设备
+    // Chỉ hỗ trợ thiết bị GigE và U3V để lấy khung dữ liệu hình ảnh
     if (MV_GIGE_DEVICE == pstMVDevInfo->nTLayerType)
     {
         int nIp1 = ((pstMVDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0xff000000) >> 24);
@@ -41,7 +41,7 @@ void PrintDeviceInfo(MV_CC_DEVICE_INFO* pstMVDevInfo)
         int nIp3 = ((pstMVDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x0000ff00) >> 8);
         int nIp4 = (pstMVDevInfo->SpecialInfo.stGigEInfo.nCurrentIp & 0x000000ff);
 
-        // ch:显示IP和设备名 | en:Print current ip and user defined name
+        // Hiển thị IP và tên thiết bị do người dùng đặt
         printf("    IP: %d.%d.%d.%d\n" , nIp1, nIp2, nIp3, nIp4);
         printf("    UserDefinedName: %s\n" , pstMVDevInfo->SpecialInfo.stGigEInfo.chUserDefinedName);
 		printf("    Device Model Name: %s\n\n", pstMVDevInfo->SpecialInfo.stGigEInfo.chModelName);
@@ -57,7 +57,7 @@ void PrintDeviceInfo(MV_CC_DEVICE_INFO* pstMVDevInfo)
     }
 }
 
-// ch:像素排列由RGB转为BGR | en:Convert pixel arrangement from RGB to BGR
+// Chuyển đổi sắp xếp pixel từ RGB sang BGR
 void RGB2BGR( unsigned char* pRgbData, unsigned int nWidth, unsigned int nHeight )
 {
     if ( NULL == pRgbData )
@@ -65,7 +65,7 @@ void RGB2BGR( unsigned char* pRgbData, unsigned int nWidth, unsigned int nHeight
         return;
     }
 
-    // red和blue数据互换
+    // Hoán đổi dữ liệu đỏ (red) và xanh dương (blue)
     for (unsigned int j = 0; j < nHeight; j++)
     {
         for (unsigned int i = 0; i < nWidth; i++)
@@ -77,7 +77,7 @@ void RGB2BGR( unsigned char* pRgbData, unsigned int nWidth, unsigned int nHeight
     }
 }
 
-// ch:帧数据转换为Mat格式图片并保存 | en:Convert data stream to Mat format then save image
+// Chuyển đổi luồng dữ liệu sang định dạng Mat và lưu ảnh
 bool Convert2Mat(MV_FRAME_OUT_INFO_EX* pstImageInfo, unsigned char * pData)
 {
     if (NULL == pstImageInfo || NULL == pData)
@@ -88,21 +88,21 @@ bool Convert2Mat(MV_FRAME_OUT_INFO_EX* pstImageInfo, unsigned char * pData)
 
     cv::Mat srcImage;
 
-    if ( PixelType_Gvsp_Mono8 == pstImageInfo->enPixelType )                // Mono8类型
+    if ( PixelType_Gvsp_Mono8 == pstImageInfo->enPixelType )                // Kiểu Mono8
     {
         srcImage = cv::Mat(pstImageInfo->nHeight, pstImageInfo->nWidth, CV_8UC1, pData);
     }
-    else if ( PixelType_Gvsp_RGB8_Packed == pstImageInfo->enPixelType )     // RGB8类型
+    else if ( PixelType_Gvsp_RGB8_Packed == pstImageInfo->enPixelType )     // Kiểu RGB8
     {
-        // Mat像素排列格式为BGR，需要转换
+        // Định dạng sắp xếp pixel của Mat là BGR, cần phải chuyển đổi
         RGB2BGR(pData, pstImageInfo->nWidth, pstImageInfo->nHeight);
         srcImage = cv::Mat(pstImageInfo->nHeight, pstImageInfo->nWidth, CV_8UC3, pData);
     }
     else
     {
-		/* Bayer 格式转换mat格式的方法:
-		1. 使用相机句柄销毁前 调用 MV_CC_ConvertPixelType 将PixelType_Gvsp_BayerRG8 等Bayer格式转换成 PixelType_Gvsp_BGR8_Packed 
-		2. 参考上面 将BGR转换为 mat格式		
+		/* Phương pháp chuyển đổi định dạng Bayer sang Mat:
+		1. Trước khi hủy handle camera, gọi MV_CC_ConvertPixelType để chuyển đổi các định dạng Bayer như PixelType_Gvsp_BayerRG8 sang PixelType_Gvsp_BGR8_Packed 
+		2. Tham khảo ở trên để chuyển đổi BGR sang định dạng Mat		
 		*/
 
         printf("Unsupported pixel format\n");
@@ -117,7 +117,7 @@ bool Convert2Mat(MV_FRAME_OUT_INFO_EX* pstImageInfo, unsigned char * pData)
 
     try 
     {
-        // ch:保存Mat图片 | en:Save converted image in a local file
+        // Lưu ảnh Mat vào tệp cục bộ
         cv::imwrite("Image_Mat.bmp", srcImage);
     }
     catch (cv::Exception& ex) 
@@ -130,7 +130,7 @@ bool Convert2Mat(MV_FRAME_OUT_INFO_EX* pstImageInfo, unsigned char * pData)
     return true;
 }
 
-// ch:帧数据转换为IplImage格式图片并保存 | en:Convert data stream in Ipl format then save image
+// Chuyển đổi luồng dữ liệu sang định dạng Ipl và lưu ảnh
 bool Convert2Ipl(MV_FRAME_OUT_INFO_EX* pstImageInfo, unsigned char * pData)
 {
     if (NULL == pstImageInfo || NULL == pData)
@@ -141,13 +141,13 @@ bool Convert2Ipl(MV_FRAME_OUT_INFO_EX* pstImageInfo, unsigned char * pData)
 
     IplImage* srcImage = NULL;
 
-    if ( PixelType_Gvsp_Mono8 == pstImageInfo->enPixelType )                // Mono8类型
+    if ( PixelType_Gvsp_Mono8 == pstImageInfo->enPixelType )                // Kiểu Mono8
     {
         srcImage = cvCreateImage(cvSize(pstImageInfo->nWidth, pstImageInfo->nHeight), IPL_DEPTH_8U, 1);
     }
-    else if ( PixelType_Gvsp_RGB8_Packed == pstImageInfo->enPixelType )     // RGB8类型
+    else if ( PixelType_Gvsp_RGB8_Packed == pstImageInfo->enPixelType )     // Kiểu RGB8
     {
-        // IplImage像素排列格式为BGR，需要转换
+        // Định dạng sắp xếp pixel của IplImage là BGR, cần phải chuyển đổi
         RGB2BGR(pData, pstImageInfo->nWidth, pstImageInfo->nHeight);
         srcImage = cvCreateImage(cvSize(pstImageInfo->nWidth, pstImageInfo->nHeight), IPL_DEPTH_8U, 3);
     }
@@ -167,7 +167,7 @@ bool Convert2Ipl(MV_FRAME_OUT_INFO_EX* pstImageInfo, unsigned char * pData)
 
     try 
     {
-        // ch:保存IplImage图片 | en:Save converted image in a local file
+        // Lưu ảnh IplImage vào tệp cục bộ
         cv::Mat cConvertImage = cv::cvarrToMat(srcImage);
         cv::imwrite("Image_Ipl.bmp", cConvertImage);
 
@@ -194,7 +194,7 @@ int main()
         MV_CC_DEVICE_INFO_LIST stDeviceList;
         memset(&stDeviceList, 0, sizeof(MV_CC_DEVICE_INFO_LIST));
 
-        // ch:设备枚举 | en:Enum device
+        // Liệt kê thiết bị
         nRet = MV_CC_EnumDevices(MV_GIGE_DEVICE | MV_USB_DEVICE, &stDeviceList);
         if (MV_OK != nRet)
         {
@@ -202,7 +202,7 @@ int main()
             break;
         }
 
-        // ch:显示设备信息 | en:Show devices
+        // Hiển thị thông tin thiết bị
         if (stDeviceList.nDeviceNum > 0)
         {
             for (unsigned int i = 0; i < stDeviceList.nDeviceNum; i++)
@@ -222,7 +222,7 @@ int main()
             break;
         }
 
-        // ch:选择相机 | en:Select device
+        // Chọn thiết bị
         unsigned int nIndex = 0;
         while (1)
         {
@@ -235,10 +235,10 @@ int main()
                     ;
                 }
 
-                // 合法输入
+                // Nhập liệu hợp lệ
                 if (nIndex >= 0 && nIndex < stDeviceList.nDeviceNum)
                 {
-                    // 设备不可连接，重新输入
+                    // Thiết bị không thể truy cập, vui lòng nhập lại
                     if (false == MV_CC_IsDeviceAccessible(stDeviceList.pDeviceInfo[nIndex], MV_ACCESS_Exclusive))
                     {
                         printf("Can't connect! ");
@@ -257,7 +257,7 @@ int main()
             }
         }
 
-        // ch:创建设备句柄 | en:Create handle
+        // Tạo handle điều khiển thiết bị
         nRet = MV_CC_CreateHandle(&handle, stDeviceList.pDeviceInfo[nIndex]);
         if (MV_OK != nRet)
         {
@@ -265,7 +265,7 @@ int main()
             break;
         }
 
-        // ch:打开设备 | en:Open device
+        // Mở thiết bị
         nRet = MV_CC_OpenDevice(handle);
         if (MV_OK != nRet)
         {
@@ -273,13 +273,13 @@ int main()
             break;
         }
 
-        // ch:探测最佳Packet大小（只支持GigE相机） | en:Detection network optimal package size(It only works for the GigE camera)
+        // Dò tìm kích thước gói tin (packet) tối ưu (chỉ dành cho camera GigE)
         if (MV_GIGE_DEVICE == stDeviceList.pDeviceInfo[nIndex]->nTLayerType)
         {
             int nPacketSize = MV_CC_GetOptimalPacketSize(handle);
             if (nPacketSize > 0)
             {
-                // 设置Packet大小
+                // Cài đặt kích thước gói tin
                 nRet = MV_CC_SetIntValue(handle, "GevSCPSPacketSize", nPacketSize);
                 if (MV_OK != nRet)
                 {
@@ -292,7 +292,7 @@ int main()
             }
         }
 
-        // ch:关闭触发模式 | en:Set trigger mode as off
+        // Tắt chế độ kích hoạt (trigger mode)
         nRet = MV_CC_SetEnumValue(handle, "TriggerMode", 0);
         if (MV_OK != nRet)
         {
@@ -300,7 +300,7 @@ int main()
             break;
         }
 
-        // ch:获取图像大小 | en:Get payload size
+        // Lấy kích thước dữ liệu (payload size)
         MVCC_INTVALUE stParam;
         memset(&stParam, 0, sizeof(MVCC_INTVALUE));
         nRet = MV_CC_GetIntValue(handle, "PayloadSize", &stParam);
@@ -311,7 +311,7 @@ int main()
         }
         unsigned int nPayloadSize = stParam.nCurValue;
 
-        // ch:初始化图像信息 | en:Init image info
+        // Khởi tạo thông tin hình ảnh
         MV_FRAME_OUT_INFO_EX stImageInfo = { 0 };
         memset(&stImageInfo, 0, sizeof(MV_FRAME_OUT_INFO_EX));
         pData = (unsigned char *)malloc(sizeof(unsigned char)* (nPayloadSize));
@@ -322,7 +322,7 @@ int main()
         }
         memset(pData, 0, sizeof(pData));
 
-        // ch:开始取流 | en:Start grab image
+        // Bắt đầu thu thập hình ảnh
         nRet = MV_CC_StartGrabbing(handle);
         if (MV_OK != nRet)
         {
@@ -330,7 +330,7 @@ int main()
             break;
         }
 
-        // ch:获取一帧图像，超时时间1000ms | en:Get one frame from camera with timeout=1000ms
+        // Lấy một khung hình từ camera với thời gian chờ 1000ms
         nRet = MV_CC_GetOneFrameTimeout(handle, pData, nPayloadSize, &stImageInfo, 1000);
         if (MV_OK == nRet)
         {
@@ -343,7 +343,7 @@ int main()
             break;
         }
 
-        // ch:停止取流 | en:Stop grab image
+        // Dừng thu thập hình ảnh
         nRet = MV_CC_StopGrabbing(handle);
         if (MV_OK != nRet)
         {
@@ -351,7 +351,7 @@ int main()
             break;
         }
 
-        // ch:关闭设备 | en:Close device
+        // Đóng thiết bị
         nRet = MV_CC_CloseDevice(handle);
         if (MV_OK != nRet)
         {
@@ -359,7 +359,7 @@ int main()
             break;
         }
 
-        // ch:输入要转换的格式 | en:Input the format to convert
+        // Nhập định dạng muốn chuyển đổi
         printf("\n[0] OpenCV_Mat\n");
         printf("[1] OpenCV_IplImage\n");
         int nFormat = 0;
@@ -369,7 +369,7 @@ int main()
 
             if (1 == scanf_s("%d", &nFormat))
             {
-                // 合法输入
+                // Nhập liệu hợp lệ
                 if (0 == nFormat || 1 == nFormat)
                 {
                     break;
@@ -381,7 +381,7 @@ int main()
             }
         }
 
-        // ch:数据转换 | en:Convert image data
+        // Chuyển đổi dữ liệu hình ảnh
         bool bConvertRet = false;
         if (OpenCV_Mat == nFormat)
         {
@@ -392,7 +392,7 @@ int main()
             bConvertRet = Convert2Ipl(&stImageInfo, pData);
         }
 
-        // ch:显示转换结果 | en:Print result
+        // Hiển thị kết quả chuyển đổi
         if (bConvertRet)
         {
             printf("OpenCV format convert finished.\n");
@@ -403,14 +403,14 @@ int main()
         }
     } while (0);
 
-    // ch:销毁句柄 | en:Destroy handle
+    // Hủy bỏ handle
     if (handle)
     {
         MV_CC_DestroyHandle(handle);
         handle = NULL;
     }
 
-    // ch:释放内存 | en:Free memery
+    // Giải phóng bộ nhớ
     if (pData)
     {
         free(pData);
